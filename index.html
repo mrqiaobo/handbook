@@ -7,7 +7,7 @@ title: Jacob的github博客
 <ul>
     {% for post in site.posts %}
         <li>
-            {{ post.date | date_to_string }}hello, this is the front page
+            {{ post.date | date_to_string }}<a href="{{ site.baseurl }}{{post.url}}">{{ post.title }}</a>
         </li>
     {% endfor %}
 </ul>
