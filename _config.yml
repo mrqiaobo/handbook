@@ -1,3 +1,5 @@
 encoding: utf-8
 theme: jekyll-theme-midnight
 baseurl: /jekyll_demo
+title: Jacob's blog
+description: This is the github blog of jacob
