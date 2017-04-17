@@ -3,9 +3,11 @@ layout: default
 title: Jacob的github博客
 ---
 <h2>{{page.title}}</h2>
-<p>最新文章</p>
+<p>文章列表</p>
 <ul>
+    {% for post in site.posts %}
         <li>
             hello, this is the front page
         </li>
+    {% endfor %}
 </ul>
