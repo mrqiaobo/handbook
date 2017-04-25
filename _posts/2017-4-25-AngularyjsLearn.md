@@ -130,7 +130,9 @@ h1 {
 | tsconfig.{app 或 spec}.json | TypeScript编译器配置 for app(tsconfig.app.json) or for UT (tsconfig.spec.json)|
 
 > 根目录
+
 根目录下的其他文件有助于对项目的构建，测试，文档编写，维护以及部署
+
 ```
 .                                                                                                                                                                        
 ├── README.md                                                                                                                                                            
@@ -143,6 +145,7 @@ h1 {
 ├── tsconfig.json                                                                                                                                                        
 └── tslint.json   
 ```
+
 | 文件 | 作用 |
 | ---- | ---- |
 | e2e/ | e2e文件夹下防止端到端测试(end to end test), 这些测试不放在src下是因为端到端测试应该是和app 分离的， 只测试你的mainApp, 因此它有自己的 tsconfig.e2e.json配置文件 |
@@ -156,6 +159,7 @@ h1 {
 | README.md | 项目的基本文档，CLI预先添加了CLI命令信息。 使用该文档去维护项目，让其他人了解你的项目以及方便使用 |
 | tsconfig.json | IDE 的 TypeScript编译器配置 |
 | tslint.json | TSLint 和Codelyzer 的lint 配置， 当使用 `ng lint` 的时候， Linting 帮助你的code style 保持一致 |
+
 
 以上是基本的Angular Js 使用 和项目的初始化。
 
