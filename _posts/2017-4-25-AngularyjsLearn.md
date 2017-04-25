@@ -62,7 +62,7 @@ ng serve --open
 
 使用--open 选项会自动打开 localhost:4200/
 
-![](/{{site.baseurl}}/assets/AngularyjsLearn/angular-serve.png)
+![](https://github.com/mrqiaobo/handbook/blob/gh-pages/assets/AngularyjsLearn/angular-serve.png?raw=true)
 
 4. 开始你自己的第一个Component
 
@@ -85,7 +85,7 @@ h1 {
 ```
 此时观察浏览器，已经为你自动更新了展现效果：
 
-![](/{{site.baseurl}}/assets/AngularyjsLearn/first-component.png)
+![](https://github.com/mrqiaobo/handbook/blob/gh-pages/assets/AngularyjsLearn/first-component.png?raw=true)
 
 ## Angular 项目的文件架构说明
 
