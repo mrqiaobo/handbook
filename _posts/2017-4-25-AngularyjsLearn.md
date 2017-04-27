@@ -1,6 +1,6 @@
 ---
 layout: contents
-title: AngularJs 4.0 学习
+title: AngularJs 4.0 学习（一）
 categories: [Web]
 tages: [AngularJs, web, tech]
 ---

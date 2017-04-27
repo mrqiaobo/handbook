@@ -3,3 +3,4 @@ theme: jekyll-theme-midnight
 baseurl: /handbook
 title: Jacob's handbook
 description: Where there is a will There is a way
+asseturl: https://github.com/mrqiaobo/handbook/blob/gh-pages/assets
