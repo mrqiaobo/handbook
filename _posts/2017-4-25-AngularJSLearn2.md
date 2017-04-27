@@ -118,7 +118,7 @@ export class AppComponent {
 
 于是，就会有下面的结果：
 
-![ngfor 显示数据]({site.asseturl}/AngularyjsLearn/using-ngfor.png)
+![ngfor 显示数据]({{site.asseturl}}/AngularyjsLearn/using-ngfor.png)
 
 `*ngFor` 在`<li>`中相当于一个重复器(repeater)的命令，它使得<li>元素以及它的子元素成为了一个重复模板. ngFor 可以迭代任意可迭代的对象(iterable object)
 > `*ngFor` 的具体使用语法可以参考[AngularJS官方文档](https://angular.io/docs/ts/latest/guide/template-syntax.html#!#ngFor)
