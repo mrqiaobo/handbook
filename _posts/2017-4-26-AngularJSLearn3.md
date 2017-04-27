@@ -43,5 +43,5 @@ export class AppModule { }
 ```
 
 然后你就可以对输入框进行编辑，查看效果：
-![editHero]({{site.asseturl}}/AngularyjsLearn/edit-hero.png)
+![editHero]({{site.asseturl}}/AngularyjsLearn/edit-hero.png?raw=true)
 
