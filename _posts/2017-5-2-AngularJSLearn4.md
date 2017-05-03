@@ -4,7 +4,7 @@ title: AngularJs 4.0 学习 (四) --- 结构概览
 categories: [Web]
 tages: [AngularJs, web, tech]
 ---
-# AngularJS 学习（三）---- 结构概览
+# AngularJS 学习（四）---- 结构概览
 ## Angular 应用的基本构成
 > 本文翻译自[angularJS 官方文档](https://angular.io/docs/ts/latest/guide/architecture.html)
 
