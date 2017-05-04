@@ -4,7 +4,7 @@ title: AngularJs 4.0 学习 (五) --- 根模块(The Root Module)
 categories: [Web]
 tages: [AngularJs, web, tech]
 ---
-# AngularJS 学习（五）---- 跟模块
+# AngularJS 学习（五）---- 根模块
 
 ## 通过根模块 "AppModule" 告诉Angular 如何构建病启动应用。
 > 本文翻译自[angularJS 官方文档](https://angular.io/docs/ts/latest/guide/appmodule.html)
