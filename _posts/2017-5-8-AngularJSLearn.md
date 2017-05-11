@@ -131,5 +131,396 @@ let car = injector.get(Car);
 
 ## Angular的依赖注入
 
+Angular 使用自己的依赖注入框架。 该框架也可以作为单独的模块给其他的应用和框架来使用。
+
+我们用一个例子来解释在Angular构建组件的时候做了什么。 下面是一个简单版本的`HeroesComponent`
+
+```javascript
+// src/app/heroes/heroes.component.ts
+import { Component } from '@angular/core';
+@Component({
+  selector: 'my-heroes',
+  template: `
+  <h2>Heroes</h2>
+  <hero-list></hero-list>
+  `
+})
+export class HeroesComponent { }
+```
+
+```javascript
+//src/app/heroes/hero-list.component.ts
+import { Component }   from '@angular/core';
+import { HEROES }      from './mock-heroes';
+@Component({
+  selector: 'hero-list',
+  template: `
+  <div *ngFor="let hero of heroes">
+    {{hero.id}} - {{hero.name}}
+  </div>
+  `
+})
+export class HeroListComponent {
+  heroes = HEROES;
+}
+```
+
+```javascript
+//src/app/heroes/hero.ts
+export class Hero {
+  id: number;
+  name: string;
+  isSecret = false;
+}
+```
+
+```javascript
+//src/app/heroes/mock-heroes.ts
+import { Hero } from './hero';
+export var HEROES: Hero[] = [
+  { id: 11, isSecret: false, name: 'Mr. Nice' },
+  { id: 12, isSecret: false, name: 'Narco' },
+  { id: 13, isSecret: false, name: 'Bombasto' },
+  { id: 14, isSecret: false, name: 'Celeritas' },
+  { id: 15, isSecret: false, name: 'Magneta' },
+  { id: 16, isSecret: false, name: 'RubberMan' },
+  { id: 17, isSecret: false, name: 'Dynama' },
+  { id: 18, isSecret: true,  name: 'Dr IQ' },
+  { id: 19, isSecret: true,  name: 'Magma' },
+  { id: 20, isSecret: true,  name: 'Tornado' }
+];
+```
+
+`HeroComponent` 是*Hero*功能部分的根组件，包含了所有的子组件。这个例子中只有一个子组件`HeroListComponent`来展示英雄列表。
+
+现在，`HeroListComponent`从`HEROES`中获得英雄。 这对早期的开发足够了，但是不够完美。如果要测试组建或者想要从其他服务获得英雄，就必须修改`heroes`的实现，并且修改`HEROES`
+
+所以最好用一个service来包装app如何获得数据。
+
+下面的`HeroService`暴露了一个`getHeroes`方法，返回一些mock数据，使用者不需要知道返回的是什么。
+
+```javascript
+import { Injectable } from '@angular/core';
+import { HEROES }     from './mock-heroes';
+@Injectable()
+export class HeroService {
+  getHeroes() { return HEROES; }
+}
+```
+
+> 当然，这不是一个真正的service。如果app真的从远程服务器获取数据，API需要是异步的，可能会返回一个Promise类型的结果。 这样，还需要重写组件来使用service
+
+一个service不过是Angular中的一个类而已。除非使用Angular注入器来注册它，否则就是一个类而已。
+
+### 配置注册器
+
+我们不用一定要自己创建一个注入器， Angular在启动的时候创建了一个应用级别的注册器：
+
+```javascript
+platformBrowserDynamic().bootstrapModule(AppModule);
+```
+
+我们必须通过在provider中注册应用需要的service来配置注入器。我们可以在NgModule或者应用的组件中注册provider。
+
+### 在*NgModule*中注册providers
+
+下面的`AppModule`注册了两个providers, `UserService` 和一个`APP_CONFIG`的provider， 在`providers` 数组中。
+
+```javascript
+@NgModule({
+  imports: [
+    BrowserModule
+  ],
+  declarations: [
+    AppComponent,
+    CarComponent,
+    HeroesComponent,
+    /* . . . */
+  ],
+  providers: [
+    UserService,
+    { provide: APP_CONFIG, useValue: HERO_DI_CONFIG }
+  ],
+  bootstrap: [ AppComponent ]
+})
+export class AppModule { }
+```
+
+由于`HeroService`只在`HeroesComponent`以及她的子组件中使用，因此，将其注册在顶层的`HeroesComponent`中是最合适的。
+
+### 在组件中注册providers
+
+下面的例子展示了在`HeroesComponent`的providers中注册了`HeroService`
+
+```javascript
+import { Component }          from '@angular/core';
+
+import { HeroService }        from './hero.service';
+
+@Component({
+  selector: 'my-heroes',
+  providers: [HeroService],
+  template: `
+  <h2>Heroes</h2>
+  <hero-list></hero-list>
+  `
+})
+export class HeroesComponent { }
+```
+
+### 使用NgModule还是使用组件来注册
+
+在NgModule中注册是跟注册器，意味着每一个在这里注册的provider在整个应用中都可以使用(该module的应用), 而在组件中注册的只能在组建和它的子类中使用。
+
+这里， `APP_CONFIG`服务需要在整个应用中使用，所以在`AppModule`的`@NgModule providers`中注册。 而`HeroService`仅仅在英雄功能部分使用，所以在`HeroComponent`
+中注册比较合理。
+
+### 为注入准备好*HeroListComponent*
+
+`HeroListComponent`应该从注入的`HeroService`中获得英雄，每一个依赖注入的模型中，组建都必须在构造器中获取service。 这里做了一些小的改变：
+
+```javascript
+/*src/app/heroes/hero-list.component(with DI)*/
+import { Component }   from '@angular/core';
+import { Hero }        from './hero';
+import { HeroService } from './hero.service';
+@Component({
+  selector: 'hero-list',
+  template: `
+  <div *ngFor="let hero of heroes">
+    {{hero.id}} - {{hero.name}}
+  </div>
+  `
+})
+export class HeroListComponent {
+  heroes: Hero[];
+  constructor(heroService: HeroService) {
+    this.heroes = heroService.getHeroes();
+  }
+}
+```
+
+```javascript
+/*src/app/heroes/hero-list.component(without DI)*/
+import { Component }   from '@angular/core';
+import { HEROES }      from './mock-heroes';
+@Component({
+  selector: 'hero-list',
+  template: `
+  <div *ngFor="let hero of heroes">
+    {{hero.id}} - {{hero.name}}
+  </div>
+  `
+})
+export class HeroListComponent {
+  heroes = HEROES;
+}
+```
+
+**注意构造函数**
+
+添加一个参数到构造函数不是所有发生的事情。
+
+```javascript
+constructor(heroService: HeroService) {
+  this.heroes = heroService.getHeroes();
+}
+```
+
+注意，在构造器中有一个参数是`HeroServie`类型的，并且`HeroListComponent`类有`@Component`修饰， 并且父组件`HeroesComponent`中也有`HeroService`在providers的信息。
+
+这些组合告诉了Anguler注入器将HeroService的实例在无论何时创建`HeroListComponent`的时候，注入一个`HeroService`进去。
+
+### 隐式的创建注入器
+
+通过下面的例子可以看到如何使用一个注入器创建一个新的`Car`, 这样是显式创建了一个注入器
+
+```javascript
+  injector = ReflectiveInjector.resolveAndCreate([Car, Engine, Tires]);
+  let car = injector.get(Car);
+```
+
+我们在其他文档中没有找到这样的代码。 显式创建注入器不是最好的选择。 Angular在创建组件的时候已经做好了创建和调用注入器的工作，为ulunshi通过标签，还是在router中导航到一个组建。如果让Angular来做这些，将会十分方便。
+
+### 单例服务
+
+在注入器的作用域内，依赖是单例的。 在这个例子中，一个`HeroServie`的实例在`HeroesComponent`以及它的子组建`HeroListComponent`中是共享的。
+
+但是，Angular的依赖注入是一个层级注入系统。这意味着在下层的注入器可以创建自己的service实例。
+
+### 测试组件
+
+依赖注入的类更加容易测试。只需要在构造函数中列出依赖即可。下面的例子中，创建一个HeroListComponent和一个模拟的service来进行测试
+
+```javascript
+let expectedHeroes = [{name: 'A'}, {name: 'B'}]
+let mockService = <HeroService> {getHeroes: () => expectedHeroes }
+
+it('should have heroes when HeroListComponent created', () => {
+  let hlc = new HeroListComponent(mockService);
+  expect(hlc.heroes.length).toEqual(expectedHeroes.length);
+});
+```
+
+### 当service中需要service
+
+HeroService是比较简单的，不需要其他的依赖。 但是当需要依赖的时候怎么办？例如需要一个log的服务。 我们也用同样的依赖注入形式即可。
+
+```javascript
+/*src/app/heroes/hero.service(v2)*/
+import { Injectable } from '@angular/core';
+import { HEROES }     from './mock-heroes';
+import { Logger }     from '../logger.service';
+@Injectable()
+export class HeroService {
+  constructor(private logger: Logger) {  }
+  getHeroes() {
+    this.logger.log('Getting heroes ...');
+    return HEROES;
+  }
+}
+```
+
+```javascript
+/*src/app/heroes/hero.service(v1)*/
+import { Injectable } from '@angular/core';
+import { HEROES }     from './mock-heroes';
+@Injectable()
+export class HeroService {
+  getHeroes() { return HEROES; }
+}
+```
+
+构造函数从构造器中获得Logger的实例并将其存储到私有属性中， 可以调用这个私有属性的方法。
+
+### 为什么使用*@Injectable()*
+
+`@Injectable()`标记一个类可以在注入器中进行实例化。也就是说，注入器实例化类的时候，如果类没有被标记，就会报错。
+
+> 开始的时候，可以在第一个版本中省略`@Injectable()`因为没有要注入的参数。但是现在必须加上，因为服务有了依赖注入。 Angular需要构造函数参数元数据来注入Logger.
+
+> 建议给所有的Service都加上`@Injectable()`
+
+注入器也可以实例化组建的，但是为何没有给组建加`@Injectable()`呢？ 如果真的需要的时候可以加上。但是在这里不需要，因为组建已经有一个`@Component`， 这个装饰是`@Injectable`的一个子类型（包括`@Directory`和`@Pipe`）。 实际上，`@Injectable()`声明了一个类可以被注入器实例化。
+
+在运行时，注册器可以在编译过的JS代码中读取类的元数据，并且使用构造器参数的类型去决定用哪一个来注入。 不是每一个JS类都有元数据的，TypeScript编译器默认取消了元数据。 如果在`tsconfig.json`中的`emitDecoratorMetadata`编译选项设置为true, 编译器会为每一个至少有一个装饰器的JS类添加元数据。
+
+虽然任何的装饰器都能够达到注入的效果，给service使用`@Injectable()`会让代码更清晰。
+
+注意在使用`@Injectable()`的时候，不要忘记了后面的小括号。
+
+## 创建和注册一个logger service
+
+注入一个logger到HeroServic分两步：
+1. 创建一个logger service
+2. 在应用中注册
+
+logger service很简单：
+
+```javascript
+import { Injectable } from '@angular/core';
+@Injectable()
+export class Logger {
+  logs: string[] = []; // capture logs for testing
+  log(message: string) {
+    this.logs.push(message);
+    console.log(message);
+  }
+}
+```
+
+我们可能在许多地方使用到logger service, 因此将它放在app文件夹下并在appModule中注册它
+
+如果忘记在provider中注册，Angular就会抛出一个异常。
+
+### 注入器的providers
+
+一个provider为依赖提供了容器以及运行时版本。 注入器根据providers创建需要注入到组建或者其他service的service的实例。 必须将给注入器注册一个service provider, 否则它不知道如何创建一个service。
+
+### Provider 类和provide 对象迭代器
+
+我们定义providers 是这样的:
+
+```javascript
+providers:[logger]
+```
+
+实际上这是一种简写的表达式，它实际上用由两个属性组成的provider迭代器创建的：
+
+```javascript
+[{provide: Logger, useClass: Logger}]
+```
+第一个是注册provider的token, 它提供可一个key 给依赖值和注册的provider。第二个是provider定义对象，可以认为是创建依赖值的秘方。有许多方法创建依赖值得原因是因为有许多方法来书写秘方。
+
+### 可选类的providers
+
+有些情况可能需要需要用一个不同的类来提供service。 下面的代码告诉注入器返回一个BetterLogger 
+
+```javascript
+[{ provide: Logger, useClass: BetterLogger }]
+```
+
+### 有依赖的类providers
+
+也许一个`EventBetterLogger`可以在log中展示用户姓名， Logger 可以从注册器中获得UserService
+
+```javascript
+@Injectable()
+class EvenBetterLogger extends Logger {
+  constructor(private userService: UserService) { super(); }
+
+  log(message: string) {
+    let name = this.userService.user.name;
+    super.log(`Message to ${name}: ${message}`);
+  }
+}
+```
+
+在BetterLogger中配置：
+
+```javascript
+[UserService, { provide: Logger, useClass: EventBetterLogger }]
+```
+
+### 别名的类providers
+
+加入一个老的组件依赖于OldLogger类， OldLogger有一个同样的接口， NewLogger， 由于一些原因不能够更新老的组件去使用它。 当老组件使用OldLogger时，我们希望用NewLogger单例来替代它。 当组件要求新的或者老的组件的时候都应该注入它。 那么OldLogger应该成为NewLogger的一个别名。
+
+当然我们不想要两个不同的NewLogger实例对象。但不幸的是，当时用useClass的时候会这样。
+
+```javascript
+[ NewLogger,
+    //Not aliased! Creates two instance of `NewLogger`
+    { provide: OldLogger, useClass: NewLogger}]
+```
+
+解决方案是： 使用useExisting
+
+```javascript
+[ NewLogger,
+    //Not aliased! Creates two instance of `NewLogger`
+    { provide: OldLogger, useExisting: NewLogger}]
+```
+
+### 值类型的providers
+
+有的时候使用提供好值得对象比注入器创建类实例更加简单：
+
+```javascript
+// An object in the shape of the logger service
+let silentLogger = {
+  logs: ['Silent logger says "Shhhhh!". Provided via "useValue"'],
+  log: () => {}
+};
+```
+
+然后可以用userValue来注册
+```javascript
+[{ provide: Logger, useValue: silentLogger }]
+```
+
+### 工厂类型的providers
+
 --TODO:
+
 
