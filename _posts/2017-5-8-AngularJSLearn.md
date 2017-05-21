@@ -521,6 +521,161 @@ let silentLogger = {
 
 ### 工厂类型的providers
 
---TODO:
+有些时候，我们需要根据一些只有在使用到的时候才能够获得的信息来动态创建依赖的值，并且这些信息可能随着浏览器session而变化。 假设这些可注入的服务不能够独立访问这些信息的源头， 这种情况叫做 Factory provider.
+
+为了给这个情况举例，我们增加了一个新的需求: `HeroService` 在一般用户浏览的时候必须隐藏 secret Hero， 只有授权的用户才可以看到他们。 
+
+因此`HeroService`需要知道用户的信息，要知道用户是否被授权查看 secret hero. 这种授权是会在session中改变的，比如当你登录了另一个user的时候。
+
+我们不能讲`UserService`注入到`HeroService`， `HeroService`不能直接访问`UserServie`来获得用户授权的信息，只能在构造其中添加一个标识来标明是否获得授权。
+
+```javascript
+constructor(
+  private logger: Logger,
+  private isAuthorized: boolean) { }
+
+getHeroes() {
+  let auth = this.isAuthorized ? 'authorized ' : 'unauthorized';
+  this.logger.log(`Getting heroes for ${auth} user.`);
+  return HEROES.filter(hero => this.isAuthorized || !hero.isSecret);
+}
+```
+
+我们可以注入`Logger`， 但是却不能够注入布尔值`isAuthorized`，因此我们需要使用factory provider 来接管对`isAuthorized` 的创建.
+
+一个factory provider 需要一个工厂方法：
+
+```javascript
+let heroServiceFactory = (logger: Logger, userService: UserService) => {
+  return new HeroService(logger, userService.user.isAuthorized);
+};
+```
+
+虽然`HeroService`不能够访问`UserService`， 但是工厂方法可以可以. 我们用工厂方法将 Logger 和UserService一起注入到 heroService中去。
+
+```javascript
+export let heroServiceProvider =
+  { provide: HeroService,
+    useFactory: heroServiceFactory,
+    deps: [Logger, UserService]
+  };
+```
+
+上面代码中， useFactory 告诉Angular provider是一个由`HeroServiceFactory` 实现的工厂方法。 `deps` 属性是一个*provider tokens*数组， Logger和UserService作为token来服务于它们的provider。 注入器会根据这些token来将对应的Service注入到对应的工厂方法中。
+
+将这个provider导出以便可以进行复用。 在之后，可以在任何需要使用的时候，利用这个provider 将HeroService注入。
+
+在这个例子中，我们需要在`HeroComponent`中代替`HeroService`，更新后的代码如下所示：
+
+```javascript
+// inject with heroServiceProvider
+import { Component }          from '@angular/core';
+import { heroServiceProvider } from './hero.service.provider';
+@Component({
+  selector: 'my-heroes',
+  template: `
+  <h2>Heroes</h2>
+  <hero-list></hero-list>
+  `,
+  providers: [heroServiceProvider]
+})
+export class HeroesComponent { }
+```
+
+```javascript
+// inject with HeroService
+import { Component }          from '@angular/core';
+import { HeroService }        from './hero.service';
+@Component({
+  selector: 'my-heroes',
+  providers: [HeroService],
+  template: `
+  <h2>Heroes</h2>
+  <hero-list></hero-list>
+  `
+})
+export class HeroesComponent { }
+```
+
+### 依赖注入的tokens
+
+当注册一个provider到注册器的时候，需要给provider一个依赖注入的token. 注入器会维护一份内部的token-provider的匹配map, 当需要依赖的时候，会根据这个map来引用， token是这个map 的关键。
+
+在之前的例子中，我们依赖的都是类的实例，而实例的类型（class type）会提供一个寻找它的key,  例如，直接通过提供实例的类型而提供了token:
+
+```javascript
+heroService: HeroService;
+```
+
+同样，当在构造函数中的需要class类型的依赖时候也是这样的， 当需要一个heroService类型的实例依赖的时候， Anguler会知道会将HeroService类作为token注入。
+
+```javascript
+constructor(heroService: HeroService)
+```
+
+因此，大部分的依赖注入是由class提供的时候是很方便的。
 
 
+### 非class类型的依赖
+
+当需要注入的不是一个class类型的时候如何呢？ 当需要注入的类型是一个字符串，布尔值，函数，或者一个对象呢？
+
+应用通常有一个config 对象，通常包含许多个小的元素，例如标题或Web API的地址等等，但是这些配置对象很多情况下并不是一个class的实例。 通常是如下的object迭代器：
+
+```javascript
+export interface AppConfig {
+  apiEndpoint: string;
+  title: string;
+}
+
+export const HERO_DI_CONFIG: AppConfig = {
+  apiEndpoint: 'api.heroes.com',
+  title: 'Dependency Injection'
+};
+```
+
+如果我们希望将这个配置对于注入器可用呢？ 我们可以通过value provider来注入一个object. 但是用什么作为token呢？ 因为object没有class作为token, 没有AppConfig这个class.
+
+> 注意，TypeScript的intercace 并不是合法的token。 因为interface 仅仅是在TypeScript设计的时候提供的，当在产生JavaScript代码之后， interface已经不存在了。因此在运行时，没有interface留下的任何信息供Angular追踪。
+
+### injection Token
+
+解决非class类型的注入的方案之一是使用 injection token. 它的定义方式如下所示：
+
+```javascript
+import { InjectionToken } from '@angular/core';
+
+export let APP_CONFIG = new InjectionToken<AppConfig>('app.config');
+```
+
+类型参数，是可选的，将依赖的类型转换为开发者的工具。 description 是另外一个开发者帮助工具。
+
+使用InjectionToken的对象来注入：
+
+```javascript
+providers: [{ provide: APP_CONFIG, useValue: HERO_DI_CONFIG }]
+```
+
+现在，可以在构造器中使用@inject指令来注入配置对象了：
+
+```javascript
+constructor(@Inject(APP_CONFIG) config: AppConfig) {
+  this.title = config.title;
+}
+```
+
+## Optional 依赖
+
+上面的例子中，`HeroService`依赖了`Logger`, 那么当我们获取的时候不一定需要Logger怎么办呢？ 我们可以使用@Optional()标记在构造器参数前面来告诉Angular这个参数是可选的。
+
+```javascript
+import { Optional } from '@angular/core';
+constructor(@Optional() private logger: Logger) {
+  if (this.logger) {
+    this.logger.log(some_message);
+  }
+}
+```
+
+以上是Angular 依赖注入的基本用法。 但是依赖注入还远不止如此。需要学习更多，可以参考 [Hierarchial Dependency injection](https://angular.io/docs/ts/latest/guide/hierarchical-dependency-injection.html)
+`
